@@ -75,6 +75,10 @@ Before you begin, ensure you have the following installed on your system:
 
 ## Usage
 
+There are two ways to use this system: the **CLI** (terminal) or through **Open WebUI** (web interface).
+
+### Option 1: CLI (Terminal)
+
 1. **Add PDFs**: Place any PDF files you want to chat with into the `./documents` folder. The system will detect and process them automatically.
 2. **Run the Assistant**: Start the main application script using Poetry.
 
@@ -95,6 +99,65 @@ Before you begin, ensure you have the following installed on your system:
    ```
 
    You can ask any question related to the content of your PDFs.
+
+### Option 2: Open WebUI Integration
+
+This project includes an OpenAI-compatible API server that integrates with [Open WebUI](https://openwebui.com/), giving you a full web-based chat interface for your RAG system.
+
+1. **Start the API Server**
+
+   ```bash
+   poetry run python api_server.py
+   ```
+
+   The server starts on `http://localhost:9099` by default. You can change the port with:
+   ```bash
+   API_PORT=8080 poetry run python api_server.py
+   ```
+
+2. **Connect Open WebUI**
+
+   Open your Open WebUI instance (usually `http://localhost:3000`) and:
+   1. Go to **Settings** → **Connections**
+   2. Under **OpenAI API**, click the **+** button to add a new connection
+   3. Set the **URL** to: `http://localhost:9099/v1`
+   4. Set the **API Key** to any value (e.g., `none`) — it's not required but the field cannot be empty
+   5. Click **Save**
+
+3. **Start Chatting**
+
+   - Select the **rag-assistant** model from the model dropdown in Open WebUI
+   - Ask questions about your documents
+   - The system uses your locally processed PDFs from the `./documents` folder
+
+4. **Upload PDFs Directly from Open WebUI (Recommended)**
+
+   Install the **RAG Chat Assistant Pipe Function** so that PDFs you attach in the
+   Open WebUI chat are automatically sent to your local `/documents` folder.
+
+   1. In Open WebUI, go to **Workspace** → **Functions** → click **+** (Add Function)
+   2. Give the function a name (e.g. `RAG Chat Assistant`)
+   3. Open the file `openwebui_pipe.py` from this repo and **copy-paste its entire
+      contents** into the code editor in Open WebUI
+   4. Click **Save**
+   5. Enable the function using the toggle
+   6. A new model called **RAG Chat Assistant** will appear in the model selector —
+      select it and start chatting
+   7. When you attach a PDF using the 📎 button, the Pipe downloads it, saves it to
+      your `/documents` folder, processes it through the RAG pipeline, and then
+      answers your questions
+
+   > **Tip:** After creating the function, click the ⚙️ (gear icon) on the function
+   > card to open **Valves** (settings). You can change the `RAG_API_BASE_URL` if
+   > your API server runs on a different port.
+
+5. **Other Ways to Upload PDFs**
+
+   - **Drop files** directly into the `./documents` folder — the watchdog monitor picks them up automatically
+   - **Upload via API** — send a POST request to `http://localhost:9099/upload`:
+     ```bash
+     curl -X POST http://localhost:9099/upload -F "file=@your-document.pdf"
+     ```
 
 ### CLI Commands
 
