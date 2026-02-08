@@ -5,3 +5,4 @@ vector_db/processed_files.pkl
 vector_db/faiss_index/index.pkl
 vector_db/faiss_index/index.faiss
 .webui_secret_key
+poetry.lock

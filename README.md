@@ -18,7 +18,7 @@ The system operates entirely on your local machine using Ollama, ensuring your d
 
 Before you begin, ensure you have the following installed on your system:
 
-1. **Python 3.8+**
+1. **Python 3.10+**
 2. **Ollama**: The system relies on Ollama to run local LLMs. Download and install it from the [official Ollama website](https://ollama.com/).
 3. **Tesseract OCR Engine**: Required for the OCR functionality.
    * Follow the installation instructions for your OS from the [Tesseract GitHub repository](https://github.com/tesseract-ocr/tesseract). Ensure the `tesseract` command is available in your system's PATH.
@@ -40,18 +40,32 @@ Before you begin, ensure you have the following installed on your system:
    ```
 
    Ensure the Ollama application is running in the background.
-3. **Create a Virtual Environment**
-   It is highly recommended to use a virtual environment to manage dependencies.
+3. **Install Poetry and uv**
+   This project uses Poetry for dependency management and uv for faster package installation.
 
    ```bash
-   python -m venv venv
-   source venv/bin/activate  # On Windows, use: venv\Scripts\activate
+   # Install uv (fast Python package installer)
+   curl -LsSf https://astral.sh/uv/install.sh | sh
+
+   # Install Poetry
+   curl -sSL https://install.python-poetry.org | python3 -
    ```
-4. **Install Python Dependencies**
+
+   Or using pip:
+   ```bash
+   pip install uv poetry
+   ```
+
+4. **Install Project Dependencies**
+   Use Poetry with uv for faster dependency resolution and installation:
 
    ```bash
-   pip install -r requirements.txt
+   # Install dependencies using Poetry (with uv acceleration)
+   poetry install
    ```
+
+   Poetry will automatically create a virtual environment and install all dependencies.
+
 5. **Create the Documents Folder**
    The application monitors a `./documents` folder for your PDFs.
 
@@ -62,9 +76,15 @@ Before you begin, ensure you have the following installed on your system:
 ## Usage
 
 1. **Add PDFs**: Place any PDF files you want to chat with into the `./documents` folder. The system will detect and process them automatically.
-2. **Run the Assistant**: Start the main application script from your terminal.
+2. **Run the Assistant**: Start the main application script using Poetry.
 
    ```bash
+   poetry run python rag_system.py
+   ```
+
+   Alternatively, activate the Poetry environment first (Poetry 2.0+):
+   ```bash
+   source $(poetry env activate)
    python rag_system.py
    ```
 3. **Interact with the CLI**:
