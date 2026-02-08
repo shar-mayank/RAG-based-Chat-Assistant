@@ -36,9 +36,9 @@ class RAGConfig:
   vector_db_path: str = "./vector_db"
   model_name: str = "gemma3:4b"
   embedding_model: str = "bge-m3:latest"
-  chunk_size: int = 1000
-  chunk_overlap: int = 200
-  max_retrieval_docs: int = 4
+  chunk_size: int = 1500
+  chunk_overlap: int = 300
+  max_retrieval_docs: int = 6
   temperature: float = 0.0
   top_p: float = 0.1
   debug_mode: bool = False  # Add debug mode flag
@@ -545,7 +545,7 @@ class RobustRAGSystem:
       temperature=self.config.temperature,
       top_p=self.config.top_p,
       repeat_penalty=1.1,
-      num_predict=512,
+      num_predict=1024,
     )
 
     # File monitoring
@@ -581,10 +581,11 @@ class RobustRAGSystem:
   def setup_query_chain(self):
         """Setup the query processing chain with improved prompt"""
 
-        # ULTRA-SIMPLE PROMPT TEMPLATE
-        template = """Answer the question using ONLY the context below. Reply in plain text. Do NOT use JSON, markdown, code blocks, bullet points, or numbered lists. Do NOT provide multiple options or alternatives. Give ONE direct, concise answer as a short paragraph. If the answer is not in the context, say: "I don't know the answer to that question."
+        # PROMPT TEMPLATE
+        template = """You are a helpful research assistant. Answer the question using ONLY the information provided in the context below. Give a thorough, accurate, and complete answer. Use plain text only (no JSON, no markdown formatting, no code blocks). If the question asks for an abstract or summary, provide the full text from the context. If the answer is not in the context, say: "I don't know the answer to that question."
 
-Context: {context}
+Context:
+{context}
 
 Question: {question}
 
@@ -637,16 +638,24 @@ Answer:"""
         return question
 
   def _format_context_with_validation(self, docs: List[Document]) -> str:
-        """Format retrieved documents as context with validation"""
+        """Format retrieved documents as context with validation and deduplication"""
         if not docs:
             return "EMPTY_CONTEXT"
 
-        context = "\n\n".join([doc.page_content for doc in docs if doc.page_content.strip()])
+        # Deduplicate chunks — the same PDF uploaded multiple times causes
+        # the retriever to return identical chunks, wasting context slots.
+        seen = set()
+        unique_contents = []
+        for doc in docs:
+            text = doc.page_content.strip()
+            if text and text not in seen:
+                seen.add(text)
+                unique_contents.append(text)
 
-        if not context.strip():
+        if not unique_contents:
             return "EMPTY_CONTEXT"
 
-        return context
+        return "\n\n".join(unique_contents)
 
   def _robust_response_filter(self, response: str) -> str:
         """Robust response filter with security checks"""
