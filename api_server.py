@@ -224,7 +224,7 @@ async def upload_file(file: UploadFile = File(...)):
     logging.info(f"Uploaded file saved to {dest}")
 
     # Process immediately instead of waiting for watchdog
-    system.process_single_file(str(dest))
+    system.process_single_file(str(dest), from_upload=True)
 
     return {
         "id": f"file-{uuid.uuid4().hex[:8]}",

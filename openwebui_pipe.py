@@ -109,12 +109,15 @@ class Pipe:
         if not files:
             files = body.get("files", [])
 
+        # Deduplicate by file ID to avoid processing the same file twice
+        seen_ids = set()
         for file_info in files:
             if not isinstance(file_info, dict):
                 continue
             file_id = file_info.get("id", "")
-            if not file_id:
+            if not file_id or file_id in seen_ids:
                 continue
+            seen_ids.add(file_id)
 
             # Emit a status event so the user sees progress
             if __event_emitter__:
@@ -162,7 +165,7 @@ class Pipe:
 
         if not question:
             if upload_messages:
-                return "\n".join(upload_messages) + "\n\nPDFs processed! You can now ask questions about them."
+                return "PDFs processed. You can now ask questions about them."
             return "Please ask a question about your documents."
 
         # ------------------------------------------------------------------
@@ -210,9 +213,6 @@ class Pipe:
                         },
                     }
                 )
-
-            if upload_messages:
-                return "\n".join(upload_messages) + "\n\n---\n\n" + answer
 
             return answer
 

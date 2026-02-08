@@ -3,9 +3,10 @@ import time
 import hashlib
 import pickle
 import logging
+import threading
 from pathlib import Path
-from typing import List, Dict, Any, Optional, Generator
-from dataclasses import dataclass
+from typing import List, Dict, Any, Optional, Generator, Set
+from dataclasses import dataclass, field
 from datetime import datetime
 import re
 import fitz  # PyMuPDF - more robust PDF processing
@@ -505,18 +506,31 @@ class PDFFileHandler(FileSystemEventHandler):
   def __init__(self, rag_system):
     self.rag_system = rag_system
 
+  def _should_skip(self, path: str) -> bool:
+    """Check if this file was recently processed via the upload endpoint"""
+    resolved = os.path.realpath(path)
+    if resolved in self.rag_system.recently_uploaded:
+      logging.info(f"Watchdog skipping {path} (just processed via upload)")
+      self.rag_system.recently_uploaded.discard(resolved)
+      return True
+    return False
+
   def on_created(self, event):
     if not event.is_directory and event.src_path.endswith('.pdf'):
+      time.sleep(1)  # Wait for file to be completely written
+      if self._should_skip(event.src_path):
+        return
       print(f"New PDF detected: {os.path.basename(event.src_path)}")
       logging.info(f"New PDF detected: {event.src_path}")
-      time.sleep(1)  # Wait for file to be completely written
       self.rag_system.process_single_file(event.src_path)
 
   def on_modified(self, event):
     if not event.is_directory and event.src_path.endswith('.pdf'):
+      time.sleep(1)  # Wait for file to be completely written
+      if self._should_skip(event.src_path):
+        return
       print(f"PDF modified: {os.path.basename(event.src_path)}")
       logging.info(f"PDF modified: {event.src_path}")
-      time.sleep(1)  # Wait for file to be completely written
       self.rag_system.process_single_file(event.src_path)
 
 class RobustRAGSystem:
@@ -529,6 +543,10 @@ class RobustRAGSystem:
     # Add conversation cache for semantic similarity
     self.conversation_cache = []
     self.cache_similarity_threshold = 0.85
+    # Track files processed via upload endpoint so watchdog skips them
+    self.recently_uploaded: Set[str] = set()
+    # Prevent concurrent processing from blocking queries
+    self.processing_lock = threading.Lock()
 
     print("Initializing Robust RAG System...")
     if self.config.debug_mode:
@@ -762,34 +780,39 @@ Answer:"""
     for pdf_file in pdf_files:
       self.process_single_file(str(pdf_file))
 
-  def process_single_file(self, file_path: str):
+  def process_single_file(self, file_path: str, from_upload: bool = False):
     """Process a single PDF file"""
-    try:
-      file_hash = self.doc_processor._get_file_hash(file_path)
+    with self.processing_lock:
+      try:
+        file_hash = self.doc_processor._get_file_hash(file_path)
 
-      if not self.vector_manager.needs_processing(file_path, file_hash):
-        print(f"Skipping {os.path.basename(file_path)} - already processed")
-        logging.info(f"Skipping {file_path} - already processed")
-        return
+        if not self.vector_manager.needs_processing(file_path, file_hash):
+          print(f"Skipping {os.path.basename(file_path)} - already processed")
+          logging.info(f"Skipping {file_path} - already processed")
+          return
 
-      print(f"Processing {os.path.basename(file_path)}...")
-      logging.info(f"Processing {file_path}")
+        print(f"Processing {os.path.basename(file_path)}...")
+        logging.info(f"Processing {file_path}")
 
-      documents = self.doc_processor.process_pdf(file_path)
+        documents = self.doc_processor.process_pdf(file_path)
 
-      if documents:
-        self.vector_manager.add_documents(documents, file_path, file_hash)
-        # Refresh query chain with updated vector store
-        self.setup_query_chain()
-        print(f"Successfully processed {os.path.basename(file_path)}")
-        logging.info(f"Successfully processed {file_path}")
-      else:
-        print(f"No documents extracted from {os.path.basename(file_path)}")
-        logging.warning(f"No documents extracted from {file_path}")
+        if documents:
+          self.vector_manager.add_documents(documents, file_path, file_hash)
+          # Refresh query chain with updated vector store
+          self.setup_query_chain()
+          print(f"Successfully processed {os.path.basename(file_path)}")
+          logging.info(f"Successfully processed {file_path}")
+        else:
+          print(f"No documents extracted from {os.path.basename(file_path)}")
+          logging.warning(f"No documents extracted from {file_path}")
 
-    except Exception as e:
-      print(f"Error processing {os.path.basename(file_path)}: {str(e)}")
-      logging.error(f"Error processing {file_path}: {str(e)}")
+        # Mark as recently uploaded so watchdog skips the duplicate event
+        if from_upload:
+          self.recently_uploaded.add(os.path.realpath(file_path))
+
+      except Exception as e:
+        print(f"Error processing {os.path.basename(file_path)}: {str(e)}")
+        logging.error(f"Error processing {file_path}: {str(e)}")
 
   def start_monitoring(self):
     """Start monitoring the PDF folder for new files"""
