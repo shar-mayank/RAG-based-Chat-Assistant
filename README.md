@@ -541,19 +541,14 @@ Pipe function handles the upload automatically.
 These commands are available at the interactive prompt when running
 `poetry run python rag_system.py`:
 
-| Command  | Description                                                        |
-|----------|--------------------------------------------------------------------|
-| help     | Print the list of available commands.                              |
-| info     | Show current system configuration: models, paths, monitoring       |
-|          | status, OCR availability, and extraction method statistics.        |
-| summary  | Show a detailed summary of all processed files, extraction methods |
-|          | used per file, and chunk counts.                                   |
-| debug    | Toggle debug mode. When enabled, every PDF processing step prints  |
-|          | detailed information: text previews, character and word counts,    |
-|          | page-level metadata, OCR confidence scores, and chunk size         |
-|          | distributions.                                                     |
-| quit     | Shut down the file monitor and exit the program cleanly.           |
-| exit     | Same as quit.                                                      |
+| Command  | Description |
+|----------|-------------|
+| help     | Print the list of available commands. |
+| info     | Show current system configuration: models, paths, monitoring status, OCR availability, and extraction method statistics. |
+| summary  | Show a detailed summary of all processed files, extraction methods used per file, and chunk counts. |
+| debug    | Toggle debug mode. When enabled, every PDF processing step prints detailed information: text previews, character and word counts, page-level metadata, OCR confidence scores, and chunk size distributions. |
+| quit     | Shut down the file monitor and exit the program cleanly. |
+| exit     | Same as quit. |
 
 ---
 
